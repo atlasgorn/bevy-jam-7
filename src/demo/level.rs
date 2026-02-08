@@ -1,6 +1,7 @@
 //! Spawn the main level.
 
 use bevy::prelude::*;
+use bevy_seedling::sample::AudioSample;
 
 use crate::{
     asset_tracking::LoadResource,
@@ -17,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Resource)]
 pub struct LevelAssets {
     #[dependency]
-    music: Handle<AudioSource>,
+    music: Handle<AudioSample>,
 }
 
 impl FromWorld for LevelAssets {
@@ -45,7 +46,7 @@ pub fn spawn_level(
             player(400.0, &player_assets, &mut texture_atlas_layouts),
             (
                 Name::new("Gameplay Music"),
-                music(level_assets.music.clone())
+                music(level_assets.music.clone()),
             )
         ],
     ));

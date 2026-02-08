@@ -12,7 +12,9 @@ mod menus;
 mod screens;
 mod theme;
 
+use avian3d::PhysicsPlugins;
 use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy_skein::SkeinPlugin;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -53,6 +55,8 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            SkeinPlugin::default(),
+            PhysicsPlugins::default(),
         ));
 
         // Order new `AppSystems` variants by adding them here:

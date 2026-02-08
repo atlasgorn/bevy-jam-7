@@ -4,6 +4,7 @@ use bevy::{
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
 };
+use bevy_seedling::sample::AudioSample;
 
 use crate::{
     AppSystems, PausableSystems,
@@ -97,7 +98,7 @@ pub struct PlayerAssets {
     #[dependency]
     ducky: Handle<Image>,
     #[dependency]
-    pub steps: Vec<Handle<AudioSource>>,
+    pub steps: Vec<Handle<AudioSample>>,
 }
 
 impl FromWorld for PlayerAssets {
