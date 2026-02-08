@@ -81,15 +81,6 @@ fn spawn_level(
         ))
         .id();
     let scene = commands.spawn(SceneRoot(level_assets.cube.clone())).id();
-    let light = commands
-        .spawn((
-            PointLight {
-                shadows_enabled: true,
-                ..default()
-            },
-            Transform::from_xyz(4.0, 8.0, 4.0),
-        ))
-        .id();
 
     commands
         .spawn((
@@ -98,7 +89,7 @@ fn spawn_level(
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
         ))
-        .add_children(&[*camera, music, scene, light]);
+        .add_children(&[*camera, music, scene]);
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
