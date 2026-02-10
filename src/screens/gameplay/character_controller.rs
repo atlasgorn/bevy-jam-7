@@ -3,8 +3,9 @@ use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::Prima
 
 use crate::{
     PausableSystems,
+    audio::sound_effect,
     screens::gameplay::{
-        Player,
+        Level, LevelAssets, Player,
         checkpoints::{ActiveCheckpoint, Checkpoint},
     },
 };
@@ -31,7 +32,7 @@ impl Plugin for CharacterControllerPlugin {
 
 #[derive(Message)]
 pub enum MovementAction {
-    Move(Vec2),
+    Move(Vec2, f32),
     Look(Vec2),
     Dash(Vec2),
     Jump,
@@ -149,10 +150,11 @@ fn kbm_input(
     if direction != Vec2::ZERO {
         if dash && player.dash_cooldown <= 0.0 {
             player.dash_cooldown = 1.5;
-            movement_writer.write(MovementAction::Dash(direction * 150.0));
+            movement_writer.write(MovementAction::Dash(direction * 200.0));
         } else {
             movement_writer.write(MovementAction::Move(
-                direction * if shift && direction.y > 0.0 { 1.5 } else { 1.0 },
+                direction,
+                if shift && direction.y > 0.0 { 1.5 } else { 1.0 },
             ));
         }
     }
@@ -180,11 +182,11 @@ fn gamepad_input(
             let dash = gamepad.just_pressed(GamepadButton::East);
             if dash && player.dash_cooldown <= 0.0 {
                 player.dash_cooldown = 1.5;
-                movement_writer.write(MovementAction::Dash(direction * 150.0));
+                movement_writer.write(MovementAction::Dash(direction * 200.0));
             } else {
                 movement_writer.write(MovementAction::Move(
-                    direction
-                        * (gamepad.get(GamepadButton::RightTrigger2).unwrap_or(0.0) * 0.5 + 1.0),
+                    direction,
+                    gamepad.get(GamepadButton::RightTrigger2).unwrap_or(0.0) * 0.5 + 1.0,
                 ));
             }
         }
@@ -237,6 +239,7 @@ fn update_grounded(
 }
 
 fn movement(
+    mut commands: Commands,
     mut movement_reader: MessageReader<MovementAction>,
     mut controllers: Query<(
         &MovementAcceleration,
@@ -247,8 +250,11 @@ fn movement(
     )>,
     mut camera: Single<&mut Transform, (With<Camera3d>, Without<MovementAcceleration>)>,
     mut player: Single<&mut Player>,
+    level: Single<Entity, With<Level>>,
     time: Res<Time>,
     window: Single<&Window, With<PrimaryWindow>>,
+    level_assets: Res<LevelAssets>,
+    mut sound_cooldown: Local<f32>,
 ) {
     for event in movement_reader.read() {
         for (
@@ -260,12 +266,19 @@ fn movement(
         ) in &mut controllers
         {
             match event {
-                MovementAction::Move(direction) => {
+                MovementAction::Move(direction, speed_multiplier) => {
                     let local_z = transform.rotation * Vec3::Z;
                     let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
                     let movement_direction = forward * direction.y + right * direction.x;
-                    linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
+                    linear_velocity.0 +=
+                        movement_direction * movement_acceleration.0 * 0.1 * speed_multiplier;
+                    if is_grounded && *sound_cooldown <= 0.0 {
+                        commands
+                            .entity(*level)
+                            .with_child(sound_effect(level_assets.step1.clone()));
+                        *sound_cooldown = if *speed_multiplier > 1.0 { 0.3 } else { 0.4 };
+                    }
                 }
                 // SAME AS MOVE BUT WITH EXTRA Y VELOCITY
                 MovementAction::Dash(direction) => {
@@ -273,8 +286,11 @@ fn movement(
                     let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
                     let movement_direction =
-                        forward * direction.y + right * direction.x + Vec3::Y * 15.0;
+                        forward * direction.y + right * direction.x + Vec3::Y * 10.0;
                     linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
+                    commands
+                        .entity(*level)
+                        .with_child(sound_effect(level_assets.whoosh1.clone()));
                 }
                 MovementAction::Look(direction) => {
                     let (mut yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
@@ -298,6 +314,7 @@ fn movement(
         }
     }
     player.dash_cooldown -= time.delta_secs();
+    *sound_cooldown -= time.delta_secs();
 }
 
 #[allow(unused)]

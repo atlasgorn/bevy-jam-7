@@ -27,6 +27,9 @@ struct Player {
     dash_cooldown: f32,
 }
 
+#[derive(Component)]
+struct Level;
+
 impl Default for Player {
     fn default() -> Self {
         Self {
@@ -84,6 +87,10 @@ pub struct LevelAssets {
     #[dependency]
     music: Handle<AudioSample>,
     #[dependency]
+    step1: Handle<AudioSample>,
+    #[dependency]
+    whoosh1: Handle<AudioSample>,
+    #[dependency]
     cube: Handle<Scene>,
 }
 
@@ -92,6 +99,8 @@ impl FromWorld for LevelAssets {
         let assets = world.resource::<AssetServer>();
         Self {
             music: assets.load("audio/music/Fluffing A Duck.ogg"),
+            step1: assets.load("audio/sound_effects/step1.wav"),
+            whoosh1: assets.load("audio/sound_effects/whoosh1.wav"),
             cube: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
         }
     }
@@ -169,6 +178,7 @@ fn spawn_level(
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
             SceneRoot(level_assets.cube.clone()),
+            Level,
         ))
         .add_children(&[player, light, music])
         .id();
