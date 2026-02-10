@@ -1,7 +1,7 @@
 use avian3d::{math::*, prelude::*};
 use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 
-use crate::PausableSystems;
+use crate::{PausableSystems, screens::gameplay::Player};
 
 pub struct CharacterControllerPlugin;
 
@@ -15,6 +15,7 @@ impl Plugin for CharacterControllerPlugin {
                 update_grounded,
                 movement,
                 apply_movement_damping,
+                ray_cast,
             )
                 .chain()
                 .in_set(PausableSystems),
@@ -254,6 +255,47 @@ fn movement(
                 }
             }
         }
+    }
+}
+
+fn ray_cast(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    children: Query<(Entity, &ChildOf)>, // child because material is a child of the object in blender or smth
+    player: Single<(Entity, &Transform), With<Player>>,
+    camera: Single<&GlobalTransform, With<Camera3d>>,
+    query: SpatialQuery,
+    time: Res<Time>,
+    mut last_time: Local<Option<f32>>,
+) {
+    let last_time = last_time.get_or_insert(time.elapsed_secs() - 0.5);
+    let camera = camera.into_inner();
+    let (player, transform) = player.into_inner();
+    if let Some(hit) = query.cast_ray(
+        camera.translation() + transform.forward() * 0.4,
+        camera.forward(),
+        5.0,
+        true,
+        &SpatialQueryFilter::from_excluded_entities([player]),
+    ) {
+        if time.elapsed_secs() - *last_time >= 0.5
+            && let Some((entity, _)) = children.iter().find(|(_, c)| c.0 == hit.entity)
+        {
+            commands
+                .entity(entity)
+                .insert(MeshMaterial3d(materials.add(Color::srgb(
+                    rand::random(),
+                    rand::random(),
+                    rand::random(),
+                ))));
+            *last_time = time.elapsed_secs();
+        }
+        info!(
+            "Hit entity {:?} at distance of {:?} with normal {:?}",
+            hit.entity, hit.distance, hit.normal
+        );
+    } else {
+        *last_time = time.elapsed_secs() - 0.5;
     }
 }
 

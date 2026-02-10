@@ -2,7 +2,9 @@
 
 use avian3d::{
     PhysicsPlugins,
-    prelude::{CoefficientCombine, Collider, Friction, GravityScale, Restitution},
+    prelude::{
+        CoefficientCombine, Collider, Friction, GravityScale, PhysicsDebugPlugin, Restitution,
+    },
 };
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, window::CursorOptions};
 use bevy_seedling::sample::AudioSample;
@@ -26,7 +28,12 @@ mod character_controller;
 struct Player;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((PhysicsPlugins::default(), CharacterControllerPlugin));
+    app.add_plugins((
+        PhysicsPlugins::default(),
+        #[cfg(feature = "dev")]
+        PhysicsDebugPlugin,
+        CharacterControllerPlugin,
+    ));
     app.load_resource::<LevelAssets>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
@@ -105,7 +112,7 @@ fn spawn_level(
 
     commands
         .entity(*camera)
-        .insert(Transform::from_xyz(0.0, 1.0, 0.0));
+        .insert(Transform::from_xyz(0.0, 0.8, 0.0));
 
     let music = commands
         .spawn((
