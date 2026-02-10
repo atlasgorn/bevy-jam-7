@@ -1,4 +1,4 @@
-use avian3d::{math::*, prelude::*};
+use avian3d::prelude::*;
 use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 
 use crate::{
@@ -31,9 +31,9 @@ impl Plugin for CharacterControllerPlugin {
 
 #[derive(Message)]
 pub enum MovementAction {
-    Move(Vector2),
-    Look(Vector2),
-    Dash(Vector2),
+    Move(Vec2),
+    Look(Vec2),
+    Dash(Vec2),
     Jump,
 }
 
@@ -92,26 +92,21 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(30.0, 0.9, 7.0, PI * 0.45)
+        Self::new(30.0, 0.9, 7.0, std::f32::consts::PI * 0.45)
     }
 }
 
 impl CharacterControllerBundle {
     pub fn new(collider: Collider) -> Self {
         let mut caster_shape = collider.clone();
-        caster_shape.set_scale(Vector::ONE * 0.99, 10);
+        caster_shape.set_scale(Vec3::ONE * 0.99, 10);
 
         Self {
             character_controller: CharacterController,
             body: RigidBody::Dynamic,
             collider,
-            ground_caster: ShapeCaster::new(
-                caster_shape,
-                Vector::ZERO,
-                Quaternion::default(),
-                Dir3::NEG_Y,
-            )
-            .with_max_distance(0.2),
+            ground_caster: ShapeCaster::new(caster_shape, Vec3::ZERO, Quat::default(), Dir3::NEG_Y)
+                .with_max_distance(0.2),
             locked_axes: LockedAxes::ROTATION_LOCKED,
             movement: MovementBundle::default(),
         }
@@ -132,31 +127,29 @@ impl CharacterControllerBundle {
 fn kbm_input(
     mut movement_writer: MessageWriter<MovementAction>,
     mut mouse_input: MessageReader<MouseMotion>,
-    mut dash_cooldown: Local<f32>,
     mut player: Single<&mut Player>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
 ) {
     let up = keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]);
     let down = keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]);
     let left = keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]);
     let right = keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]);
     let shift = keyboard_input.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let dash = keyboard_input.pressed(KeyCode::KeyR);
-    let heal = keyboard_input.just_pressed(KeyCode::KeyH);
+    let dash = keyboard_input.just_pressed(KeyCode::KeyR);
+    let damage = keyboard_input.just_pressed(KeyCode::KeyH);
 
-    if heal {
-        player.health = (player.health - 0.1).max(0.0);
+    if damage {
+        player.health = (player.health - 0.25).max(0.0);
     }
 
     let horizontal = right as i8 - left as i8;
     let vertical = up as i8 - down as i8;
-    let direction = Vector2::new(horizontal as f32, vertical as f32).clamp_length_max(1.0);
+    let direction = Vec2::new(horizontal as f32, vertical as f32).clamp_length_max(1.0);
 
-    if direction != Vector2::ZERO {
-        if dash && *dash_cooldown <= 0.0 {
-            *dash_cooldown = 1.5;
-            movement_writer.write(MovementAction::Dash(direction * 200.0));
+    if direction != Vec2::ZERO {
+        if dash && player.dash_cooldown <= 0.0 {
+            player.dash_cooldown = 1.5;
+            movement_writer.write(MovementAction::Dash(direction * 150.0));
         } else {
             movement_writer.write(MovementAction::Move(
                 direction * if shift && direction.y > 0.0 { 1.5 } else { 1.0 },
@@ -171,20 +164,29 @@ fn kbm_input(
     for motion in mouse_input.read() {
         movement_writer.write(MovementAction::Look(motion.delta));
     }
-
-    *dash_cooldown -= time.delta_secs();
 }
 
-fn gamepad_input(mut movement_writer: MessageWriter<MovementAction>, gamepads: Query<&Gamepad>) {
+fn gamepad_input(
+    mut movement_writer: MessageWriter<MovementAction>,
+    mut player: Single<&mut Player>,
+    gamepads: Query<&Gamepad>,
+) {
     for gamepad in gamepads.iter() {
         if let (Some(x), Some(y)) = (
             gamepad.get(GamepadAxis::LeftStickX),
             gamepad.get(GamepadAxis::LeftStickY),
         ) {
-            movement_writer.write(MovementAction::Move(
-                Vector2::new(x, y).clamp_length_max(1.0)
-                    * (gamepad.get(GamepadButton::RightTrigger2).unwrap_or(0.0) + 1.0),
-            ));
+            let direction = Vec2::new(x, y).clamp_length_max(1.0);
+            let dash = gamepad.just_pressed(GamepadButton::East);
+            if dash && player.dash_cooldown <= 0.0 {
+                player.dash_cooldown = 1.5;
+                movement_writer.write(MovementAction::Dash(direction * 150.0));
+            } else {
+                movement_writer.write(MovementAction::Move(
+                    direction
+                        * (gamepad.get(GamepadButton::RightTrigger2).unwrap_or(0.0) * 0.5 + 1.0),
+                ));
+            }
         }
 
         if let (Some(x), Some(y)) = (
@@ -192,7 +194,7 @@ fn gamepad_input(mut movement_writer: MessageWriter<MovementAction>, gamepads: Q
             gamepad.get(GamepadAxis::RightStickY),
         ) {
             movement_writer.write(MovementAction::Look(
-                Vector2::new(x, -y).clamp_length_max(1.0) * 6.0,
+                Vec2::new(x, -y).clamp_length_max(1.0) * 10.0,
             ));
         }
 
@@ -220,7 +222,7 @@ fn update_grounded(
                 commands.entity(checkpoint).insert(ActiveCheckpoint);
             }
             if let Some(angle) = max_slope_angle {
-                (rotation * -hit.normal2).angle_between(Vector::Y).abs() <= angle.0
+                (rotation * -hit.normal2).angle_between(Vec3::Y).abs() <= angle.0
             } else {
                 true
             }
@@ -235,7 +237,6 @@ fn update_grounded(
 }
 
 fn movement(
-    time: Res<Time>,
     mut movement_reader: MessageReader<MovementAction>,
     mut controllers: Query<(
         &MovementAcceleration,
@@ -245,10 +246,10 @@ fn movement(
         Has<Grounded>,
     )>,
     mut camera: Single<&mut Transform, (With<Camera3d>, Without<MovementAcceleration>)>,
+    mut player: Single<&mut Player>,
+    time: Res<Time>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let delta_time = time.delta_secs_f64().adjust_precision();
-
     for event in movement_reader.read() {
         for (
             movement_acceleration,
@@ -264,7 +265,7 @@ fn movement(
                     let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
                     let movement_direction = forward * direction.y + right * direction.x;
-                    linear_velocity.0 += movement_direction * movement_acceleration.0 * delta_time;
+                    linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
                 }
                 // SAME AS MOVE BUT WITH EXTRA Y VELOCITY
                 MovementAction::Dash(direction) => {
@@ -272,8 +273,8 @@ fn movement(
                     let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
                     let movement_direction =
-                        forward * direction.y + right * direction.x + Vec3::Y * 10.0;
-                    linear_velocity.0 += movement_direction * movement_acceleration.0 * delta_time;
+                        forward * direction.y + right * direction.x + Vec3::Y * 15.0;
+                    linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
                 }
                 MovementAction::Look(direction) => {
                     let (mut yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
@@ -296,6 +297,7 @@ fn movement(
             }
         }
     }
+    player.dash_cooldown -= time.delta_secs();
 }
 
 #[allow(unused)]

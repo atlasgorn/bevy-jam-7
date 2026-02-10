@@ -24,6 +24,7 @@ struct Player {
     // normalized values (0.0..1.0)
     health: f32,
     hallucination_severity: f32,
+    dash_cooldown: f32,
 }
 
 impl Default for Player {
@@ -31,6 +32,7 @@ impl Default for Player {
         Self {
             health: 1.0,
             hallucination_severity: 0.0,
+            dash_cooldown: 0.0,
         }
     }
 }
@@ -119,8 +121,8 @@ fn spawn_level(
         .spawn((
             Name::new("Player"),
             CharacterControllerBundle::new(Collider::capsule(0.4, 1.0)).with_movement(
-                75.0,
-                0.92,
+                5.0,
+                0.90,
                 7.0,
                 35f32.to_radians(),
             ),
@@ -128,10 +130,7 @@ fn spawn_level(
             Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
             GravityScale(2.0),
             Transform::from_xyz(0.0, 1.8, 2.0),
-            Player {
-                health: 1.0,
-                hallucination_severity: 0.0,
-            },
+            Player::default(),
         ))
         .add_child(*camera)
         .id();

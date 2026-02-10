@@ -1,5 +1,5 @@
 use avian3d::prelude::LinearVelocity;
-use bevy::prelude::*;
+use bevy::{prelude::*, scene::SceneInstanceReady};
 
 use crate::{menus::Menu, screens::gameplay::Player};
 
@@ -7,6 +7,7 @@ pub struct CheckpointPlugin;
 
 impl Plugin for CheckpointPlugin {
     fn build(&self, app: &mut App) {
+        app.add_observer(move_player_to_checkpoint);
         app.add_systems(OnEnter(Menu::None), respawn_at_checkpoint);
     }
 }
@@ -31,6 +32,15 @@ fn respawn_at_checkpoint(
 
     *player = Default::default();
     *linear_velocity = Default::default();
-    transform.translation = active_checkpoint.translation;
-    transform.translation.y += 1.0; // spawn above the checkpoint so player doesn't fall through the floor
+
+    // spawn above the checkpoint so player doesn't fall through the floor
+    transform.translation = active_checkpoint.translation + Vec3::Y;
+}
+
+fn move_player_to_checkpoint(
+    _: On<SceneInstanceReady>,
+    mut player: Single<&mut Transform, With<Player>>,
+    active_checkpoint: Single<&Transform, (With<ActiveCheckpoint>, Without<Player>)>,
+) {
+    player.translation = active_checkpoint.translation + Vec3::Y;
 }
