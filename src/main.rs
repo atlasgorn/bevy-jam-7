@@ -12,7 +12,15 @@ mod screens;
 mod theme;
 
 use avian3d::prelude::{Physics, PhysicsTime};
-use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy::{
+    asset::AssetMetaCheck,
+    camera::Exposure,
+    core_pipeline::tonemapping::Tonemapping,
+    light::{AtmosphereEnvironmentMapLight, GlobalAmbientLight, SunDisk, VolumetricFog},
+    pbr::{Atmosphere, AtmosphereSettings},
+    post_process::bloom::Bloom,
+    prelude::*,
+};
 use bevy_skein::SkeinPlugin;
 
 fn main() -> AppExit {
@@ -23,6 +31,11 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
+        // Set black clear color so atmosphere is visible
+        app.insert_resource(ClearColor(Color::BLACK));
+        // Disable ambient light - atmosphere will provide lighting
+        app.insert_resource(GlobalAmbientLight::NONE);
+
         // Add Bevy plugins.
         app.add_plugins(
             DefaultPlugins
@@ -107,6 +120,22 @@ struct Pause(pub bool);
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera3d::default()));
+fn spawn_camera(
+    mut commands: Commands,
+    mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
+) {
+    commands.spawn((
+        Name::new("Camera"),
+        Camera3d::default(),
+        Atmosphere::earthlike(scattering_mediums.add(bevy::pbr::ScatteringMedium::default())),
+        AtmosphereSettings::default(),
+        Exposure {
+            ev100: Exposure::EV100_BLENDER,
+        },
+        Tonemapping::AcesFitted,
+        // Without bloom sun is just white circle
+        Bloom::NATURAL,
+        AtmosphereEnvironmentMapLight::default(),
+        VolumetricFog::default(),
+    ));
 }

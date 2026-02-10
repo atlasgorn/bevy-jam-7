@@ -4,7 +4,9 @@ use avian3d::{
     PhysicsPlugins,
     prelude::{CoefficientCombine, Collider, Friction, GravityScale, Restitution},
 };
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, window::CursorOptions};
+use bevy::{
+    input::common_conditions::input_just_pressed, light::SunDisk, prelude::*, window::CursorOptions,
+};
 use bevy_seedling::sample::AudioSample;
 
 use crate::{
@@ -152,7 +154,13 @@ fn spawn_level(
             Name::new("Light"),
             DirectionalLight {
                 shadows_enabled: true,
+                // purple-ish night color
+                color: Color::LinearRgba(LinearRgba::new(0.5, 0.3, 1.0, 1.0)),
                 ..default()
+            },
+            SunDisk {
+                angular_size: 0.06,
+                intensity: 0.5,
             },
             Transform::from_rotation(Quat::from_euler(
                 EulerRot::YXZ,
