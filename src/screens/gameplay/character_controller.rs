@@ -15,7 +15,7 @@ impl Plugin for CharacterControllerPlugin {
                 update_grounded,
                 movement,
                 apply_movement_damping,
-                ray_cast,
+                // ray_cast,
             )
                 .chain()
                 .in_set(PausableSystems),
@@ -27,6 +27,7 @@ impl Plugin for CharacterControllerPlugin {
 pub enum MovementAction {
     Move(Vector2),
     Look(Vector2),
+    Dash(Vector2),
     Jump,
 }
 
@@ -125,22 +126,30 @@ impl CharacterControllerBundle {
 fn kbm_input(
     mut movement_writer: MessageWriter<MovementAction>,
     mut mouse_input: MessageReader<MouseMotion>,
+    mut dash_cooldown: Local<f32>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
 ) {
     let up = keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]);
     let down = keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]);
     let left = keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]);
     let right = keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]);
     let shift = keyboard_input.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
+    let dash = keyboard_input.pressed(KeyCode::KeyR);
 
     let horizontal = right as i8 - left as i8;
     let vertical = up as i8 - down as i8;
     let direction = Vector2::new(horizontal as f32, vertical as f32).clamp_length_max(1.0);
 
     if direction != Vector2::ZERO {
-        movement_writer.write(MovementAction::Move(
-            direction * if shift && direction.y > 0.0 { 2.0 } else { 1.0 },
-        ));
+        if dash && *dash_cooldown <= 0.0 {
+            *dash_cooldown = 1.5;
+            movement_writer.write(MovementAction::Dash(direction * 200.0));
+        } else {
+            movement_writer.write(MovementAction::Move(
+                direction * if shift && direction.y > 0.0 { 1.5 } else { 1.0 },
+            ));
+        }
     }
 
     if keyboard_input.just_pressed(KeyCode::Space) {
@@ -150,6 +159,8 @@ fn kbm_input(
     for motion in mouse_input.read() {
         movement_writer.write(MovementAction::Look(motion.delta));
     }
+
+    *dash_cooldown -= time.delta_secs();
 }
 
 fn gamepad_input(mut movement_writer: MessageWriter<MovementAction>, gamepads: Query<&Gamepad>) {
@@ -235,6 +246,15 @@ fn movement(
                     let movement_direction = forward * direction.y + right * direction.x;
                     linear_velocity.0 += movement_direction * movement_acceleration.0 * delta_time;
                 }
+                // SAME AS MOVE BUT WITH EXTRA Y VELOCITY
+                MovementAction::Dash(direction) => {
+                    let local_z = transform.rotation * Vec3::Z;
+                    let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
+                    let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
+                    let movement_direction =
+                        forward * direction.y + right * direction.x + Vec3::Y * 10.0;
+                    linear_velocity.0 += movement_direction * movement_acceleration.0 * delta_time;
+                }
                 MovementAction::Look(direction) => {
                     let (mut yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
                     let (_, mut pitch, _) = camera.rotation.to_euler(EulerRot::YXZ);
@@ -258,6 +278,7 @@ fn movement(
     }
 }
 
+#[allow(unused)]
 fn ray_cast(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -290,10 +311,10 @@ fn ray_cast(
                 ))));
             *last_time = time.elapsed_secs();
         }
-        info!(
-            "Hit entity {:?} at distance of {:?} with normal {:?}",
-            hit.entity, hit.distance, hit.normal
-        );
+        // info!(
+        //     "Hit entity {:?} at distance of {:?} with normal {:?}",
+        //     hit.entity, hit.distance, hit.normal
+        // );
     } else {
         *last_time = time.elapsed_secs() - 0.5;
     }

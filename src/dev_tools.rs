@@ -1,5 +1,6 @@
 //! Development tools for the game. This plugin is only enabled in dev builds.
 
+use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos};
 use bevy::{
     dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
 };
@@ -12,7 +13,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         EguiPlugin::default(),
         WorldInspectorPlugin::default().run_if(|options: Res<UiDebugOptions>| options.enabled),
+        PhysicsDebugPlugin,
     ));
+    app.add_systems(Startup, |mut store: ResMut<GizmoConfigStore>| {
+        store.config_mut::<PhysicsGizmos>().0.enabled = false;
+    });
     app.add_systems(Update, log_transitions::<Screen>);
 
     // Toggle the debug overlay for UI.
@@ -24,6 +29,10 @@ pub(super) fn plugin(app: &mut App) {
 
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 
-fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>) {
+fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>, mut store: ResMut<GizmoConfigStore>) {
     options.toggle();
+
+    // physics debug
+    let enabled = &mut store.config_mut::<PhysicsGizmos>().0.enabled;
+    *enabled = !*enabled;
 }

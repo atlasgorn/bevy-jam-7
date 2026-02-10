@@ -2,9 +2,7 @@
 
 use avian3d::{
     PhysicsPlugins,
-    prelude::{
-        CoefficientCombine, Collider, Friction, GravityScale, PhysicsDebugPlugin, Restitution,
-    },
+    prelude::{CoefficientCombine, Collider, Friction, GravityScale, Restitution},
 };
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, window::CursorOptions};
 use bevy_seedling::sample::AudioSample;
@@ -12,7 +10,6 @@ use bevy_seedling::sample::AudioSample;
 use crate::{
     Pause,
     asset_tracking::LoadResource,
-    audio::music,
     menus::Menu,
     screens::{
         Screen,
@@ -28,12 +25,7 @@ mod character_controller;
 struct Player;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((
-        PhysicsPlugins::default(),
-        #[cfg(feature = "dev")]
-        PhysicsDebugPlugin,
-        CharacterControllerPlugin,
-    ));
+    app.add_plugins((PhysicsPlugins::default(), CharacterControllerPlugin));
     app.load_resource::<LevelAssets>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
@@ -96,10 +88,10 @@ fn spawn_level(
         .spawn((
             Name::new("Player"),
             CharacterControllerBundle::new(Collider::capsule(0.4, 1.0)).with_movement(
-                50.0,
+                75.0,
                 0.92,
                 7.0,
-                30f32.to_radians(),
+                35f32.to_radians(),
             ),
             Friction::ZERO.with_combine_rule(CoefficientCombine::Min),
             Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
@@ -117,7 +109,23 @@ fn spawn_level(
     let music = commands
         .spawn((
             Name::new("Gameplay Music"),
-            music(level_assets.music.clone()),
+            // music(level_assets.music.clone()),
+        ))
+        .id();
+
+    let light = commands
+        .spawn((
+            Name::new("Light"),
+            DirectionalLight {
+                shadows_enabled: true,
+                ..default()
+            },
+            Transform::from_rotation(Quat::from_euler(
+                EulerRot::YXZ,
+                -35f32.to_radians(),
+                -25f32.to_radians(),
+                0.0,
+            )),
         ))
         .id();
 
@@ -129,7 +137,7 @@ fn spawn_level(
             DespawnOnExit(Screen::Gameplay),
             SceneRoot(level_assets.cube.clone()),
         ))
-        .add_children(&[player, music]);
+        .add_children(&[player, light, music]);
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
