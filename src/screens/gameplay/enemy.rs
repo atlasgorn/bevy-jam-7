@@ -55,19 +55,16 @@ fn spawn_enemy(
             agent: default(),
             archipelago_ref: ArchipelagoRef3d::new(navmesh_ref.0),
             settings: AgentSettings {
-                radius: 0.5,
+                radius: 2.0,
                 desired_speed: 1.0,
                 max_speed: 2.0,
             },
         },
         AgentTarget3d::None,
+        Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
+        Collider::capsule(0.4, 1.0),
         // AgentTarget3d::Point(vec3(0.0, 0.0, 0.0)),
-        Children::spawn_one((
-            Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
-            MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
-            Collider::capsule(0.4, 1.0),
-            Transform::from_xyz(0.0, (0.4 + 1.0) * 0.5, 0.0),
-        )),
     ));
 
     if let Some(parent) = args.parent {
