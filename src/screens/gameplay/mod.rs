@@ -2,6 +2,7 @@
 
 use avian3d::{PhysicsPlugins, prelude::*};
 use bevy::{
+    anti_alias::fxaa::Fxaa,
     camera::Exposure,
     core_pipeline::tonemapping::Tonemapping,
     input::common_conditions::input_just_pressed,
@@ -177,7 +178,7 @@ fn spawn_level(
         .spawn((
             Name::new("Player"),
             CharacterControllerBundle::new(Collider::capsule(0.4, 1.0)).with_movement(
-                5.0,
+                0.5,
                 0.90,
                 7.0,
                 35f32.to_radians(),
@@ -210,6 +211,8 @@ fn spawn_level(
         Bloom::NATURAL,
         AtmosphereEnvironmentMapLight::default(),
         VolumetricFog::default(),
+        Msaa::Off,
+        Fxaa::default(),
     ));
 
     let light = commands

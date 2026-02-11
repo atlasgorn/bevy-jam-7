@@ -272,12 +272,15 @@ fn movement(
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
                     let movement_direction = forward * direction.y + right * direction.x;
                     linear_velocity.0 +=
-                        movement_direction * movement_acceleration.0 * 0.1 * speed_multiplier;
-                    if is_grounded && *sound_cooldown <= 0.0 {
+                        movement_direction * movement_acceleration.0 * speed_multiplier;
+
+                    let length =
+                        movement_direction.length() * movement_acceleration.0 * speed_multiplier;
+                    if is_grounded && length > 0.05 && *sound_cooldown <= 0.0 {
                         commands
                             .entity(*level)
                             .with_child(sound_effect(level_assets.step1.clone()));
-                        *sound_cooldown = if *speed_multiplier > 1.0 { 0.3 } else { 0.4 };
+                        *sound_cooldown = 0.2 / length;
                     }
                 }
                 // SAME AS MOVE BUT WITH EXTRA Y VELOCITY
