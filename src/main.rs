@@ -76,6 +76,7 @@ impl Plugin for AppPlugin {
         // Set up the `Pause` state.
         app.init_state::<Pause>();
         app.configure_sets(Update, PausableSystems.run_if(in_state(Pause(false))));
+        app.configure_sets(FixedUpdate, PausableSystems.run_if(in_state(Pause(false))));
         app.add_systems(
             Update,
             |mut physics_time: ResMut<Time<Physics>>, paused: Res<State<Pause>>| {
