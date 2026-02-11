@@ -9,9 +9,7 @@ use bevy::{
     core_pipeline::tonemapping::Tonemapping,
     input::common_conditions::input_just_pressed,
     light::{AtmosphereEnvironmentMapLight, SunDisk, VolumetricFog},
-    pbr::{
-        Atmosphere, AtmosphereSettings, Falloff, PhaseFunction, ScatteringMedium, ScatteringTerm,
-    },
+    pbr::{Atmosphere, AtmosphereSettings, ScatteringMedium},
     post_process::bloom::Bloom,
     prelude::*,
     window::CursorOptions,
@@ -165,29 +163,7 @@ fn spawn_level(
     // Set camera position and add atmosphere
     commands.entity(*camera).insert((
         Transform::from_xyz(0.0, 0.8, 0.0),
-        Atmosphere::earthlike(scattering_mediums.add(
-            // Custom alien green atmosphere with green-dominant Rayleigh scattering
-            ScatteringMedium::new(
-                256,
-                256,
-                [
-                    // Rayleigh scattering term - green-purple
-                    ScatteringTerm {
-                        absorption: Vec3::ZERO,
-                        scattering: Vec3::new(15.0e-6, 80.0e-6, 10.0e-6), // Much higher green, reduced red/blue
-                        falloff: Falloff::Exponential { scale: 9.0 / 60.0 },
-                        phase: PhaseFunction::Rayleigh,
-                    },
-                    // Mie scattering term - thick atmosphere (2.0e-6)
-                    ScatteringTerm {
-                        absorption: Vec3::splat(1.996e-6),
-                        scattering: Vec3::splat(1.68e-6), // Thick Mie scattering
-                        falloff: Falloff::Exponential { scale: 1.2 / 60.0 },
-                        phase: PhaseFunction::Mie { asymmetry: 0.8 },
-                    },
-                ],
-            ),
-        )),
+        Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default())),
         AtmosphereSettings::default(),
         Exposure {
             ev100: Exposure::EV100_BLENDER,
@@ -203,14 +179,9 @@ fn spawn_level(
             Name::new("Light"),
             DirectionalLight {
                 shadows_enabled: true,
-                // Light blue light
-                color: Color::LinearRgba(LinearRgba::new(0.2, 0.5, 1.0, 1.0)),
                 ..default()
             },
-            SunDisk {
-                angular_size: 0.06,
-                intensity: 0.5,
-            },
+            SunDisk::default(),
             Transform::from_rotation(Quat::from_euler(
                 EulerRot::YXZ,
                 -35f32.to_radians(),
