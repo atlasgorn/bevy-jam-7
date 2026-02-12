@@ -93,9 +93,13 @@ pub struct LevelAssets {
     #[dependency]
     whoosh1: Handle<AudioSample>,
     #[dependency]
-    cube: Handle<Scene>,
+    test_scene: Handle<Scene>,
     #[dependency]
     props: Handle<Scene>,
+
+    // todo: move?
+    #[dependency]
+    hammerhead: Handle<Scene>,
 }
 
 impl FromWorld for LevelAssets {
@@ -105,8 +109,9 @@ impl FromWorld for LevelAssets {
             music: assets.load("audio/music/Fluffing A Duck.ogg"),
             step1: assets.load("audio/sound_effects/step1.wav"),
             whoosh1: assets.load("audio/sound_effects/whoosh1.wav"),
-            cube: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
+            test_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
             props: assets.load(GltfAssetLabel::Scene(0).from_asset("models/props.glb")),
+            hammerhead: assets.load(GltfAssetLabel::Scene(0).from_asset("models/hammerhead.glb")),
         }
     }
 }
@@ -202,14 +207,14 @@ fn spawn_level(
             Transform::default(),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
-            SceneRoot(level_assets.cube.clone()),
+            SceneRoot(level_assets.test_scene.clone()),
             Level,
         ))
         .add_children(&[player, light, music])
         .id();
 
     // todo: remove
-    commands.spawn(SceneRoot(level_assets.props.clone()));
+    // commands.spawn(SceneRoot(level_assets.props.clone()));
 
     commands.queue(enemy::EnemySpawnCmd {
         pos: Isometry3d::from_translation(vec3(0.0, 0.0, 5.0)),

@@ -4,6 +4,8 @@ use bevy_landmass::{PointSampleDistance3d, prelude::*};
 
 use crate::screens::Screen;
 
+use crate::screens::gameplay::LevelAssets;
+
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
@@ -45,6 +47,7 @@ impl Command for EnemySpawnCmd {
 fn spawn_enemy(
     In(args): In<EnemySpawnCmd>,
     mut c: Commands,
+    level_assets: Res<LevelAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     navmesh_ref: Res<super::NavmeshArchipelagoHolder>,
@@ -67,6 +70,7 @@ fn spawn_enemy(
         AgentTarget3d::None,
         Children::spawn_one((
             Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
+            SceneRoot(level_assets.hammerhead.clone()),
             MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
             Collider::capsule(0.4, 1.0),
             Transform::from_xyz(0.0, 0.9, 0.0),
