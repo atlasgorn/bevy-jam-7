@@ -177,10 +177,11 @@ fn spawn_level(
     commands.insert_resource(NavmeshArchipelagoHolder(archipelago_id));
 
     set_cursor_grab(&mut cursor_options, true);
+    let player_collider = Collider::capsule(0.4, 1.0);
     let player = commands
         .spawn((
             Name::new("Player"),
-            CharacterControllerBundle::new(Collider::capsule(0.4, 1.0)).with_movement(
+            CharacterControllerBundle::new(player_collider.clone()).with_movement(
                 0.5,
                 0.90,
                 7.0,
@@ -189,8 +190,9 @@ fn spawn_level(
             Friction::ZERO.with_combine_rule(CoefficientCombine::Min),
             Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
             GravityScale(2.0),
-            Transform::from_xyz(0.0, 1.8, 2.0),
+            Transform::from_xyz(0.0, 0.9, 2.0),
             Player::default(),
+            Children::spawn_one((player_collider, Transform::from_xyz(0., 0.9, 0.))),
         ))
         .add_child(*camera)
         .id();
@@ -204,7 +206,7 @@ fn spawn_level(
 
     // Set camera position and add atmosphere
     commands.entity(*camera).insert((
-        Transform::from_xyz(0.0, 0.8, 0.0),
+        Transform::from_xyz(0.0, 0.8 + 0.9, 0.0),
         Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default())),
         AtmosphereSettings::default(),
         Exposure {
@@ -249,13 +251,13 @@ fn spawn_level(
 
     // todo: remove
     commands.spawn(SceneRoot(level_assets.props.clone()));
-    
+
     commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(0.0, 0.9, 5.0)),
+        pos: Isometry3d::from_translation(vec3(0.0, 0.0, 5.0)),
         parent: Some(level),
     });
     commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(4.0, 0.9, 5.0)),
+        pos: Isometry3d::from_translation(vec3(4.0, 0.0, 5.0)),
         parent: Some(level),
     });
 }

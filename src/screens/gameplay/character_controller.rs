@@ -61,7 +61,6 @@ pub struct MaxSlopeAngle(f32);
 pub struct CharacterControllerBundle {
     character_controller: CharacterController,
     body: RigidBody,
-    collider: Collider,
     ground_caster: ShapeCaster,
     locked_axes: LockedAxes,
     movement: MovementBundle,
@@ -105,9 +104,14 @@ impl CharacterControllerBundle {
         Self {
             character_controller: CharacterController,
             body: RigidBody::Dynamic,
-            collider,
-            ground_caster: ShapeCaster::new(caster_shape, Vec3::ZERO, Quat::default(), Dir3::NEG_Y)
-                .with_max_distance(0.2),
+            ground_caster: ShapeCaster::new(
+                caster_shape,
+                Vec3::Y * 0.9,
+                Quat::default(),
+                Dir3::NEG_Y,
+            )
+            .with_max_distance(0.2)
+            .with_max_hits(10),
             locked_axes: LockedAxes::ROTATION_LOCKED,
             movement: MovementBundle::default(),
         }
